@@ -31,6 +31,11 @@ JSNES.Keyboard = function() {
         KEY_RIGHT: 7
     };
 
+    this.keyState = {
+        KEY_DOWN: 0x41,
+        KEY_UP: 0x40
+    };
+
     this.state1 = new Array(8);
     for (i = 0; i < this.state1.length; i++) {
         this.state1[i] = 0x40;
@@ -81,5 +86,14 @@ JSNES.Keyboard.prototype = {
     
     keyPress: function(evt) {
         evt.preventDefault();
+    },
+
+    setKeyState: function (player, key, keyState) {
+        var state = this.state1;
+        if (player > 0) {
+            state = this.state2;
+        }
+
+        state[key] = keyState;
     }
 };
