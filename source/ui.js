@@ -142,7 +142,7 @@ if (typeof jQuery !== 'undefined') {
                 },
 
                 updateStatus: function(s) {
-                    console.log(s);
+                    //console.log(s);
                 },
 
                 writeFrame: function(buffer, prevBuffer) {
