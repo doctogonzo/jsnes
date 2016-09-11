@@ -30,16 +30,25 @@ JSNES.PAPU = function(nes) {
     this.initCounter = 2048;
     this.channelEnableValue = null;
 
-    this.bufferSize = 8192;
-    this.bufferIndex = 0;
-    this.sampleRate = 44100;
+    this.audio = {
+        audioCtx: new (window.AudioContext || window.webkitAudioContext)()
+    };
+    this.audio.sampleRate = this.audio.audioCtx.sampleRate;
+    this.audio.bufferSize = this.audio.sampleRate * 4.0;
+    this.audio.buffer = this.audio.audioCtx.createBuffer(2, this.audio.bufferSize, this.audio.sampleRate);
+    this.audio.sampleBufferL = this.audio.buffer.getChannelData(0);
+    this.audio.sampleBufferR = this.audio.buffer.getChannelData(1);
+    this.audio.source = null;
+    this.audio.bufferIndex = 0;
+    this.audio.globalBufferIndex = 0;
+    this.audio.soundLastTime = null;
+    this.audio.globalBufferIndexLastTime = null;
 
     this.lengthLookup = null;
     this.dmcFreqLookup = null;
     this.noiseWavelengthLookup = null;
     this.square_table = null;
     this.tnd_table = null;
-    this.sampleBuffer = new Array(this.bufferSize*2);
 
     this.frameIrqEnabled = false;
     this.frameIrqActive = null;
@@ -118,11 +127,10 @@ JSNES.PAPU = function(nes) {
 
 JSNES.PAPU.prototype = {
     reset: function() {
-        this.sampleRate = this.nes.opts.sampleRate;
         this.sampleTimerMax = Math.floor(
             (1024.0 * this.nes.opts.CPU_FREQ_NTSC *
                 this.nes.opts.preferredFrameRate) / 
-                (this.sampleRate * 60.0)
+                (this.audio.sampleRate * 60.0)
         );
     
         this.frameTime = Math.floor(
@@ -130,7 +138,6 @@ JSNES.PAPU.prototype = {
         );
 
         this.sampleTimer = 0;
-        this.bufferIndex = 0;
     
         this.updateChannelEnable(0);
         this.masterFrameCounter = 0;
@@ -149,7 +156,6 @@ JSNES.PAPU.prototype = {
         this.noise.reset();
         this.dmc.reset();
 
-        this.bufferIndex = 0;
         this.accCount = 0;
         this.smpSquare1 = 0;
         this.smpSquare2 = 0;
@@ -628,22 +634,66 @@ JSNES.PAPU.prototype = {
         if (sampleValueL < this.minSample) {
             this.minSample = sampleValueL;
         }
-        this.sampleBuffer[this.bufferIndex++] = sampleValueL;
-        this.sampleBuffer[this.bufferIndex++] = sampleValueR;
-        
+        this.audio.sampleBufferL[this.audio.bufferIndex] = sampleValueL;
+        this.audio.sampleBufferR[this.audio.bufferIndex] = sampleValueR;
+        this.audio.bufferIndex++;
+        this.audio.globalBufferIndex++;
+
         // Write full buffer
-        if (this.bufferIndex === this.sampleBuffer.length) {
-            this.nes.ui.writeAudio(this.sampleBuffer);
-            this.sampleBuffer = new Array(this.bufferSize*2);
-            this.bufferIndex = 0;
+        if (this.audio.bufferIndex === this.audio.bufferSize) {
+            this.audio.bufferIndex = 0;
         }
+
+        this.applySoundRate();
 
         // Reset sampled values:
         this.smpSquare1 = 0;
         this.smpSquare2 = 0;
         this.smpTriangle = 0;
         this.smpDmc = 0;
+    },
 
+    enableSound: function (enable) {
+        if (enable)
+            this.startAudioPlay();
+        else if (this.audio.source)
+            this.stopAudioPlay();
+    },
+
+    startAudioPlay: function () {
+        if (this.audio.source)
+            this.stopAudioPlay();
+        this.audio.source = this.audio.audioCtx.createBufferSource();
+        this.audio.source.loop = true;
+        this.audio.source.loopEnd = this.audio.buffer.duration;
+        this.audio.source.buffer = this.audio.buffer;
+        this.audio.source.connect(this.audio.audioCtx.destination);
+
+        this.audio.source.start(this.audio.audioCtx.currentTime + 0.5);
+    },
+
+    stopAudioPlay: function () {
+        this.audio.source.stop();
+        this.audio.soundStartTime = null;
+        this.audio.bufferIndex = 0;
+        this.audio.globalBufferIndex = 0;
+        this.audio.globalBufferIndexLastTime = 0;
+        this.audio.soundLastTime = null;
+        this.audio.source = null;
+    },
+
+    applySoundRate: function () {
+        if (!this.audio.soundLastTime)
+            this.audio.soundLastTime = this.audio.audioCtx.currentTime;
+        var currTime = this.audio.audioCtx.currentTime;
+        var lastPlayed = currTime - this.audio.soundLastTime;
+        if (this.audio.source && lastPlayed > 0.5) {
+            this.audio.source.playbackRate.value =
+                (this.audio.globalBufferIndex - this.audio.globalBufferIndexLastTime - 0.01 * this.audio.sampleRate)
+                / (lastPlayed * this.audio.sampleRate);
+            this.audio.soundLastTime = currTime;
+            this.audio.globalBufferIndexLastTime = this.audio.globalBufferIndex;
+        }
     },
 
     getLengthMax: function(value){

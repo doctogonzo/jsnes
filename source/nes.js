@@ -19,14 +19,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 var JSNES = function(opts) {
     this.opts = {
         ui: JSNES.DummyUI,
-        swfPath: 'lib/',
         
         preferredFrameRate: 60,
         fpsInterval: 500, // Time between updating FPS in ms
         showDisplay: true,
 
         emulateSound: false,
-        sampleRate: 44100, // Sound sample rate in hz
         
         CPU_FREQ_NTSC: 1789772.5, //1789772.72727272d;
         CPU_FREQ_PAL: 1773447.4
@@ -58,6 +56,13 @@ JSNES.prototype = {
     isRunning: false,
     fpsFrameCount: 0,
     romData: null,
+
+    enableSound: function (enable) {
+        this.opts.emulateSound = enable;
+        if (!this.isRunning)
+            return;
+        this.papu.enableSound(enable);
+    },
     
     // Resets the system
     reset: function() {
@@ -68,12 +73,13 @@ JSNES.prototype = {
         this.cpu.reset();
         this.ppu.reset();
         this.papu.reset();
+        this.enableSound(this.opts.emulateSound);
     },
     
     start: function() {
         var self = this;
         
-        if (this.rom !== null && this.rom.valid) {
+        if (this.rom && this.rom.valid) {
             if (!this.isRunning) {
                 this.isRunning = true;
                 
@@ -85,6 +91,8 @@ JSNES.prototype = {
                 this.fpsInterval = setInterval(function() {
                     self.printFps();
                 }, this.opts.fpsInterval);
+
+                this.enableSound(this.opts.emulateSound);
             }
         }
         else {
@@ -168,6 +176,7 @@ JSNES.prototype = {
     stop: function() {
         clearInterval(this.frameInterval);
         clearInterval(this.fpsInterval);
+        this.enableSound(false);
         this.isRunning = false;
     },
     
@@ -216,7 +225,6 @@ JSNES.prototype = {
     setFramerate: function(rate){
         this.opts.preferredFrameRate = rate;
         this.frameTime = 1000 / rate;
-        this.papu.setSampleRate(this.opts.sampleRate, false);
     },
     
     toJSON: function() {

@@ -20,7 +20,6 @@ JSNES.DummyUI = function(nes) {
     this.nes = nes;
     this.enable = function() {};
     this.updateStatus = function() {};
-    this.writeAudio = function() {};
     this.writeFrame = function() {};
 };
 
@@ -79,13 +78,6 @@ if (typeof jQuery !== 'undefined') {
 
                 self.canvasImageData = self.canvasContext.getImageData(0, 0, 256, 240);
                 self.resetCanvas();
-
-                /*
-                 * Sound
-                 */
-                self.dynamicaudio = new DynamicAudio({
-                    swf: nes.opts.swfPath+'dynamicaudio.swf'
-                });
             };
 
             UI.prototype = {
@@ -151,10 +143,6 @@ if (typeof jQuery !== 'undefined') {
 
                 updateStatus: function(s) {
                     console.log(s);
-                },
-
-                writeAudio: function(samples) {
-                    return this.dynamicaudio.writeInt(samples);
                 },
 
                 writeFrame: function(buffer, prevBuffer) {
