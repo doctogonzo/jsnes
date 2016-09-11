@@ -634,8 +634,9 @@ JSNES.PAPU.prototype = {
         if (sampleValueL < this.minSample) {
             this.minSample = sampleValueL;
         }
-        this.audio.sampleBufferL[this.audio.bufferIndex] = sampleValueL;
-        this.audio.sampleBufferR[this.audio.bufferIndex] = sampleValueR;
+
+        this.audio.sampleBufferL[this.audio.bufferIndex] = sampleValueL * 2 / 0xFFFF - 1;
+        this.audio.sampleBufferR[this.audio.bufferIndex] = sampleValueR * 2 / 0xFFFF - 1;
         this.audio.bufferIndex++;
         this.audio.globalBufferIndex++;
 
@@ -669,7 +670,7 @@ JSNES.PAPU.prototype = {
         this.audio.source.buffer = this.audio.buffer;
         this.audio.source.connect(this.audio.audioCtx.destination);
 
-        this.audio.source.start(this.audio.audioCtx.currentTime + 0.5);
+        this.audio.source.start(this.audio.audioCtx.currentTime + 0.01);
     },
 
     stopAudioPlay: function () {

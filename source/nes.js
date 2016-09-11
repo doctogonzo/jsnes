@@ -73,7 +73,7 @@ JSNES.prototype = {
         this.cpu.reset();
         this.ppu.reset();
         this.papu.reset();
-        this.enableSound(this.opts.emulateSound);
+        this.papu.enableSound(this.opts.emulateSound);
     },
     
     start: function() {
@@ -92,7 +92,7 @@ JSNES.prototype = {
                     self.printFps();
                 }, this.opts.fpsInterval);
 
-                this.enableSound(this.opts.emulateSound);
+                this.papu.enableSound(this.opts.emulateSound);
             }
         }
         else {
@@ -176,7 +176,7 @@ JSNES.prototype = {
     stop: function() {
         clearInterval(this.frameInterval);
         clearInterval(this.fpsInterval);
-        this.enableSound(false);
+        this.papu.enableSound(false);
         this.isRunning = false;
     },
     
